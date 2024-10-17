@@ -5,9 +5,9 @@ pip install torchvision
 git clone https://github.com/Dadaah/v1v1_image_classification_cifar100
 ```
 ## How to run
-After you have cloned the repository, you can train cifar100 by running the script below
+After you have cloned the repository, you can train cifar100 and change seed value by running the script below 
 ```bash
-python /v1v1_image_classification_cifar100/main.py
+python /v1v1_image_classification_cifar100/main.py --seed 42 
 ```
 ## Implementation Details
 | Epoch | Learning Rate | Optimizer | Momentum |
