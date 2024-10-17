@@ -24,7 +24,9 @@ from torch.utils.data import ConcatDataset
 from sklearn.model_selection import train_test_split  # Stratified Sampling을 위한 라이브러리 추가
 import matplotlib.pyplot as plt
 
-
+def seed_worker(worker_id):
+    np.random.seed(seed + worker_id)
+    random.seed(seed + worker_id)
 parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
@@ -93,7 +95,7 @@ trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=Tru
 testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=False, transform=transform_test)
 num_classes = 100
 
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2,worker_init_fn = seed_worker)
 # valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2)
 testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
 
