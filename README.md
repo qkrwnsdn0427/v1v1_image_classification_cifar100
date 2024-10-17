@@ -5,6 +5,6 @@ pip install http://download.pytorch.org/whl/cu80/torch-0.1.12.post2-cp27-none-li
 pip install torchvision
 git clone https://github.com/Dadaah/v1v1_image_classification_cifar100
 
-
+'''bash
 ## How to run
 python main
