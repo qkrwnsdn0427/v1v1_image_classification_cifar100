@@ -24,9 +24,11 @@ from torch.utils.data import ConcatDataset
 from sklearn.model_selection import train_test_split  # Stratified Sampling을 위한 라이브러리 추가
 import matplotlib.pyplot as plt
 
-
+import os
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
+parser.add_argument('--seed', default=42, type=float, help='seed')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
 parser.add_argument('--depth', default=28, type=int, help='depth of model')
 parser.add_argument('--widen_factor', default=10, type=int, help='width of model')
@@ -36,9 +38,15 @@ parser.add_argument('--resume', '-r', action='store_true', help='resume from che
 parser.add_argument('--testOnly', '-t', action='store_true', help='Test mode with the saved model')
 args = parser.parse_args()
 seed = 42  # 원하는 seed 값으로 변경 가능
+seed = args.seed
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.use_deterministic_algorithms(True)
 def seed_worker(worker_id):
     np.random.seed(seed + worker_id)
     random.seed(seed + worker_id)
