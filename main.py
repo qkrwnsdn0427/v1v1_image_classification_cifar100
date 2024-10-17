@@ -36,8 +36,8 @@ parser.add_argument('--dropout', default=0.3, type=float, help='dropout_rate')
 parser.add_argument('--dataset', default='cifar100', type=str, help='dataset = cifar100')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--testOnly', '-t', action='store_true', help='Test mode with the saved model')
-args = parser.parse_args()
-seed = 42  # 원하는 seed 값으로 변경 가능
+args = parser.parse_args()  
+# 원하는 seed 값으로 변경 가능
 seed = args.seed
 random.seed(seed)
 np.random.seed(seed)
