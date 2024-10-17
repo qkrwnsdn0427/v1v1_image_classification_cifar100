@@ -17,8 +17,8 @@ import time
 import argparse
 import datetime
 
-from networks import *
-from wide_resnet import Wide_ResNet  #Wide_resnet.py
+
+from wide_resnet import *  #Wide_resnet.py
 from torch.autograd import Variable
 from torch.utils.data import ConcatDataset
 from sklearn.model_selection import train_test_split  # Stratified Sampling을 위한 라이브러리 추가
