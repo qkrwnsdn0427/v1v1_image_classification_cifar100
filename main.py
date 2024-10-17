@@ -24,9 +24,7 @@ from torch.utils.data import ConcatDataset
 from sklearn.model_selection import train_test_split  # Stratified Sampling을 위한 라이브러리 추가
 import matplotlib.pyplot as plt
 
-def seed_worker(worker_id):
-    np.random.seed(seed + worker_id)
-    random.seed(seed + worker_id)
+
 parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
@@ -41,7 +39,9 @@ seed = 42  # 원하는 seed 값으로 변경 가능
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
-
+def seed_worker(worker_id):
+    np.random.seed(seed + worker_id)
+    random.seed(seed + worker_id)
 # Hyper Parameter settings
 use_cuda = torch.cuda.is_available()
 if use_cuda:
