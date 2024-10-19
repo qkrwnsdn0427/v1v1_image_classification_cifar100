@@ -20,6 +20,6 @@ python /v1v1_image_classification_cifar100/main.py --seed 42
 
 ## Cifar-100 Results
 
-| Network         | Dropout | Preprocess          | Per Epoch | Top1 acc(%) | Top5 acc(%) |
-|-----------------|---------|---------------------|-----------|-------------|-------------|
-| WideResNet 28*20| 0.2     | meanstd             | 100s      | 83.52       | 96.06       |
+| Network         | Dropout | Preprocess          |  Per Epoch  | Top1 acc(%) | Top5 acc(%) |
+|-----------------|---------|---------------------|-------------|-------------|-------------|
+| WideResNet 28*20| 0.2     | meanstd             | 6 min 40 sec|    83.52    |    96.06    |
