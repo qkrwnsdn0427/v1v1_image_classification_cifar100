@@ -83,7 +83,7 @@ class Wide_ResNet(nn.Module):
         return out
 
 if __name__ == '__main__':
-    net=Wide_ResNet(28, 10, 0.3, 10)
+    net=Wide_ResNet(28, 20, 0.2, 100)
     y = net(Variable(torch.randn(1,3,32,32)))
 
     print(y.size())
