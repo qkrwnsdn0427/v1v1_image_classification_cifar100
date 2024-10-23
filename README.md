@@ -2,8 +2,8 @@
 
 Python 3.10
 
-torchvison 0.19.1+cu122  
-torch 2.4.1+cu122  
+torchvison 0.19.1+cu118  
+torch 2.4.1+cu118  
 
 ## Requirements
 ```bash
@@ -24,7 +24,7 @@ python /v1v1_image_classification_cifar100/main.py --seed 42
 | 81~100| 0.0008        | SGD       | 0.9      |
 
 ## CUDA and GPU Information
-CUDA Version: 12.2
+CUDA Version: 11.8
 GPU: NVIDIA RTX 3090
 
 ## Cifar-100 Results
