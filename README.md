@@ -31,4 +31,4 @@ GPU: NVIDIA RTX 3090
 
 | Network         | Dropout | Preprocess          |   Per Epoch  | Top1 acc(%) | Top5 acc(%) |
 |-----------------|---------|---------------------|--------------|-------------|-------------|
-| WideResNet 28*20| 0.2     | meanstd             | 6 min 40 sec |    83.52    |    96.06    |
+| WideResNet 28*20| 0.2     | meanstd             | 11 min 34 sec |    84.37    |    97.01    |
