@@ -2,8 +2,8 @@
 
 Python 3.10
 
-torchvison 0.19.1+cu121 
-torch 2.4.1+cu121
+torchvison 0.19.1+cu121  
+torch 2.4.1+cu121  
 
 ## Requirements
 ```bash
