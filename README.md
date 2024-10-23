@@ -2,6 +2,7 @@
 
 ```bash
 pip install torchvision
+pip install matplotlib
 git clone https://github.com/Dadaah/v1v1_image_classification_cifar100
 ```
 ## How to run
