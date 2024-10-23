@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import os
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
+parser = argparse.ArgumentParser(description='PyTorch CIFAR-100 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
 parser.add_argument('--seed', default=42, type=int, help='seed')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
@@ -36,7 +36,7 @@ parser.add_argument('--dropout', default=0.2, type=float, help='dropout_rate')
 parser.add_argument('--dataset', default='cifar100', type=str, help='dataset = cifar100')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--testOnly', '-t', action='store_true', help='Test mode with the saved model')
-args = parser.parse_args(args=[])
+args = parser.parse_args()
 
 # Seed setup
 seed = args.seed
