@@ -1,8 +1,13 @@
-## Requirements
+## Version
 
+Python 3.8
+PyTorch 1.13.0
+torchvision 0.14.0
+CUDA 12.2
+
+## Requirements
 ```bash
-pip install torchvision
-pip install matplotlib
+pip install torch==1.13.0 torchvision==0.14.0 numpy==1.21.2 matplotlib==3.4.3 scikit-learn==1.0.2
 git clone https://github.com/Dadaah/v1v1_image_classification_cifar100
 ```
 ## How to run
@@ -18,6 +23,9 @@ python /v1v1_image_classification_cifar100/main.py --seed 42
 | 61~80 | 0.009         | SGD       | 0.9      |
 | 81~100| 0.0008        | SGD       | 0.9      |
 
+## CUDA and GPU Information
+CUDA Version: 12.2
+GPU: NVIDIA RTX 3090
 
 ## Cifar-100 Results
 
