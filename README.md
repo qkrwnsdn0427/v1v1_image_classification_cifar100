@@ -29,6 +29,6 @@ GPU: NVIDIA RTX 3090
 
 ## Cifar-100 Results
 
-| Network         | Dropout | Preprocess          |   Per Epoch  | Top1 acc(%) | Top5 acc(%) |
-|-----------------|---------|---------------------|--------------|-------------|-------------|
-| WideResNet 28*20| 0.2     | meanstd             | 11 min 34 sec |    84.37    |    97.01    |
+| Network         | Dropout | Preprocess          |   Per Epoch  | Top1 acc(%) | Top5 acc(%) | superclass acc(%) |
+|-----------------|---------|---------------------|--------------|-------------|-------------|-------------|
+| WideResNet 28*20| 0.2     | meanstd             | 11 min 34 sec |    84.37    |    97.01    |    91.33    |
