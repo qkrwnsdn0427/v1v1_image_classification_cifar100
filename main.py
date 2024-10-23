@@ -31,7 +31,9 @@ parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
 parser.add_argument('--seed', default=42, type=int, help='seed')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
 parser.add_argument('--depth', default=28, type=int, help='depth of model')
-parser.add_argument('--widen_factor', default=14, type=int, help='width of model')
+parser.add_argument('--widen_factor_1', default=14, type=int, help='width of model')
+parser.add_argument('--widen_factor_2', default=16, type=int, help='width of model')
+parser.add_argument('--widen_factor_3', default=18, type=int, help='width of model')
 parser.add_argument('--dropout', default=0.2, type=float, help='dropout_rate')
 parser.add_argument('--dataset', default='cifar100', type=str, help='dataset = cifar100')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -157,12 +159,12 @@ def rand_bbox(size, lam):
 
 # Return Wide-ResNet network and filename
 def get_ensemble_networks(args):
-    net1 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
-    net2 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
-    net3 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
-    file_name1 = 'wide-resnet1-'+str(args.depth)+'x'+str(args.widen_factor)
-    file_name2 = 'wide-resnet2-'+str(args.depth)+'x'+str(args.widen_factor)
-    file_name3 = 'wide-resnet3-'+str(args.depth)+'x'+str(args.widen_factor)
+    net1 = Wide_ResNet(args.depth, args.widen_factor_1, args.dropout, num_classes)
+    net2 = Wide_ResNet(args.depth, args.widen_factor_2, args.dropout, num_classes)
+    net3 = Wide_ResNet(args.depth, args.widen_factor_3, args.dropout, num_classes)
+    file_name1 = 'wide-resnet1-'+str(args.depth)+'x'+str(args.widen_factor_1)
+    file_name2 = 'wide-resnet2-'+str(args.depth)+'x'+str(args.widen_factor_2)
+    file_name3 = 'wide-resnet3-'+str(args.depth)+'x'+str(args.widen_factor_3)
     return [net1, net2, net3], [file_name1, file_name2, file_name3]
 
 # Model setup
