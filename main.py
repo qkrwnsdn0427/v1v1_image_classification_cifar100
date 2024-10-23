@@ -345,9 +345,13 @@ if not args.testOnly:
         print(f'| Elapsed time: {int(elapsed_time//3600)}:{int((elapsed_time % 3600)//60)}:{int(elapsed_time % 60)}')
 
 # Final testing with ensemble after all epochs
-print('\n[Phase 4] : Testing model ensemble')
-top1_acc, top5_acc, top1_superclass_acc, top5_superclass_acc = test_ensemble(cf.num_epochs)
-print('* Test results : Acc@1 = %.2f%%' %(best_acc))
+print('\n[Phase 4] : Best model testing with ensemble')
+for i, net in enumerate(nets):
+    checkpoint = torch.load('./checkpoint/'+args.dataset+os.sep+file_names[i]+'.t7')
+    nets[i] = checkpoint['net']
+best_acc_top1, best_acc_top5, best_superclass_top1, best_superclass_top5 = test_ensemble(cf.num_epochs)
+print('* Best model test results : Acc@1 = %.2f%%, Top-5 = %.2f%%, Superclass Top-1 = %.2f%%, Superclass Top-5 = %.2f%%' 
+      % (best_acc_top1, best_acc_top5, best_superclass_top1, best_superclass_top5))
 
 # Visualizing the training vs test loss
 plt.plot(train_losses, label='Training Loss')
