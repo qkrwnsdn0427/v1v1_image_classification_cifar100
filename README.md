@@ -1,9 +1,9 @@
 ## Version
 
-Python 3.8
-PyTorch 1.13.0
-torchvision 0.14.0
-CUDA 12.2
+Python 3.8  
+PyTorch 1.13.0  
+torchvision 0.14.0  
+CUDA 12.2  
 
 ## Requirements
 ```bash
