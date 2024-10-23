@@ -1,13 +1,13 @@
 ## Version
 
-Python 3.8  
-PyTorch 1.13.0  
-torchvision 0.14.0  
-CUDA 12.2  
+Python 3.10
+
+torchvison 0.19.1+cu121 
+torch 2.4.1+cu121
 
 ## Requirements
 ```bash
-pip install torch==1.13.0 torchvision==0.14.0 numpy==1.21.2 matplotlib==3.4.3 scikit-learn==1.0.2
+pip install torch==2.4.1 torchvision==0.19.1 numpy==1.21.2 matplotlib==3.4.3 scikit-learn==1.0.2
 git clone https://github.com/Dadaah/v1v1_image_classification_cifar100
 ```
 ## How to run
