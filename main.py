@@ -22,7 +22,7 @@ from torch.autograd import Variable
 from torch.utils.data import ConcatDataset
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-
+from collections import Counter
 import os
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
@@ -199,6 +199,21 @@ def hard_voting_prediction(outputs_list):
     outputs_stack = torch.stack(outputs_list)  # Stack outputs from all models
     voted_predictions, _ = torch.mode(outputs_stack, dim=0)  # Hard voting
     return voted_predictions
+    
+def hard_voting_top5(outputs_list):
+    """Performs hard voting for Top-5 predictions by choosing the most common classes."""
+    batch_size = outputs_list[0].size(0)  # 배치 크기
+    final_top5 = torch.zeros((batch_size, 5), dtype=torch.long)  # 최종 Top-5 예측 저장 공간
+    
+    for i in range(batch_size):
+        # 각 모델의 Top-5 예측 결과를 하나의 리스트로 결합
+        all_top5_preds = torch.cat([out[i] for out in outputs_list], dim=0)
+        # 가장 자주 등장한 Top-5 클래스를 선택
+        top5_common = Counter(all_top5_preds.tolist()).most_common(5)
+        # 가장 많이 등장한 클래스들로 최종 Top-5 예측 설정
+        final_top5[i] = torch.tensor([item[0] for item in top5_common])
+    
+    return final_top5
 
 # Training function
 def train(epoch):
@@ -274,7 +289,7 @@ def test_ensemble(epoch):
             voted_top1 = hard_voting_prediction([torch.argmax(out, dim=1) for out in outputs_list])
 
             # Hard voting으로 Top-5 예측 값 계산
-            voted_top5 = hard_voting_prediction([torch.topk(out, 5, dim=1)[1] for out in outputs_list])
+            voted_top5 = hard_voting_top5([torch.topk(out, 5, dim=1)[1] for out in outputs_list])
 
             total += targets.size(0)
 
