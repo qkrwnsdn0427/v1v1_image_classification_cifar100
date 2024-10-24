@@ -336,7 +336,7 @@ def test_ensemble(epoch):
 # Main training and testing loop
 if not args.testOnly:
     elapsed_time = 0
-    for epoch in range(start_epoch, num_epochs):
+    for epoch in range(start_epoch, num_epochs+1):
         start_time = time.time()
 
         train(epoch)
