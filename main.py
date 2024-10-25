@@ -22,32 +22,29 @@ from torch.autograd import Variable
 from torch.utils.data import ConcatDataset
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from collections import Counter
+
 import os
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-parser = argparse.ArgumentParser(description='PyTorch CIFAR-100 Training')
+parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
 parser.add_argument('--seed', default=42, type=int, help='seed')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
 parser.add_argument('--depth', default=28, type=int, help='depth of model')
-parser.add_argument('--widen_factor_1', default=14, type=int, help='width of model')
-parser.add_argument('--widen_factor_2', default=16, type=int, help='width of model')
-parser.add_argument('--widen_factor_3', default=18, type=int, help='width of model')
+parser.add_argument('--widen_factor', default=14, type=int, help='width of model')
 parser.add_argument('--dropout', default=0.2, type=float, help='dropout_rate')
 parser.add_argument('--dataset', default='cifar100', type=str, help='dataset = cifar100')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--testOnly', '-t', action='store_true', help='Test mode with the saved model')
-args = parser.parse_args([])
+args = parser.parse_args(args=[])
 
 # Seed setup
 seed = args.seed
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.use_deterministic_algorithms(True)
@@ -88,8 +85,8 @@ trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=Tru
 testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=False, transform=transform_test)
 num_classes = 100
 
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0, worker_init_fn=seed_worker)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=0)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=4, worker_init_fn=seed_worker)
+testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=4)
 
 # CIFAR-100 Superclass mapping (index-based)
 superclass_mapping = {
@@ -160,12 +157,12 @@ def rand_bbox(size, lam):
 
 # Return Wide-ResNet network and filename
 def get_ensemble_networks(args):
-    net1 = Wide_ResNet(args.depth, args.widen_factor_1, args.dropout, num_classes)
-    net2 = Wide_ResNet(args.depth, args.widen_factor_2, args.dropout, num_classes)
-    net3 = Wide_ResNet(args.depth, args.widen_factor_3, args.dropout, num_classes)
-    file_name1 = 'wide-resnet1-'+str(args.depth)+'x'+str(args.widen_factor_1)
-    file_name2 = 'wide-resnet2-'+str(args.depth)+'x'+str(args.widen_factor_2)
-    file_name3 = 'wide-resnet3-'+str(args.depth)+'x'+str(args.widen_factor_3)
+    net1 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
+    net2 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
+    net3 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
+    file_name1 = 'wide-resnet1-'+str(args.depth)+'x'+str(args.widen_factor)
+    file_name2 = 'wide-resnet2-'+str(args.depth)+'x'+str(args.widen_factor)
+    file_name3 = 'wide-resnet3-'+str(args.depth)+'x'+str(args.widen_factor)
     return [net1, net2, net3], [file_name1, file_name2, file_name3]
 
 # Model setup
@@ -199,21 +196,6 @@ def hard_voting_prediction(outputs_list):
     outputs_stack = torch.stack(outputs_list)  # Stack outputs from all models
     voted_predictions, _ = torch.mode(outputs_stack, dim=0)  # Hard voting
     return voted_predictions
-    
-def hard_voting_top5(outputs_list):
-    """Performs hard voting for Top-5 predictions by choosing the most common classes."""
-    batch_size = outputs_list[0].size(0)  # 배치 크기
-    final_top5 = torch.zeros((batch_size, 5), dtype=torch.long)  # 최종 Top-5 예측 저장 공간
-    
-    for i in range(batch_size):
-        # 각 모델의 Top-5 예측 결과를 하나의 리스트로 결합
-        all_top5_preds = torch.cat([out[i] for out in outputs_list], dim=0)
-        # 가장 자주 등장한 Top-5 클래스를 선택
-        top5_common = Counter(all_top5_preds.tolist()).most_common(5)
-        # 가장 많이 등장한 클래스들로 최종 Top-5 예측 설정
-        final_top5[i] = torch.tensor([item[0] for item in top5_common])
-    
-    return final_top5
 
 # Training function
 def train(epoch):
@@ -241,7 +223,7 @@ def train(epoch):
             optimizers[i].zero_grad()  # 각 네트워크의 옵티마이저 초기화
             outputs = net(inputs)  # 네트워크의 출력 계산
             loss = lam * criterion(outputs, targets_a) + (1 - lam) * criterion(outputs, targets_b)
-            loss.backward()  # backward
+            loss.backward()  # 역전파
             optimizers[i].step()  # 옵티마이저 업데이트
 
         train_loss += loss.item()
@@ -258,115 +240,111 @@ def train(epoch):
     train_loss = train_loss / len(trainloader)
     train_losses.append(train_loss)
 
-# 최고 성능을 기록할 변수
-best_acc_top1 = 0
-best_acc_top5 = 0
-best_superclass_top1 = 0
-best_superclass_top5 = 0
-
-# Test function with hard voting for Top-1, Top-5, and Superclass accuracies
+# Test function with hard voting ensemble
+# Test function with hard voting ensemble
 def test_ensemble(epoch):
-    global best_acc, best_acc_top1, best_acc_top5, best_superclass_top1, best_superclass_top5
+    global best_acc
     for net in nets:
-        net.eval()  # 각 모델을 평가 모드로 설정
+        net.eval()
     test_loss = 0
-    correct_top1 = 0  # Top-1 정확도
-    correct_top5 = 0  # Top-5 정확도
-    total = 0         # 총 샘플 수
+    correct = 0
+    total = 0
     
-    correct_top1_superclass = 0  # Superclass Top-1 정확도
-    correct_top5_superclass = 0  # Superclass Top-5 정확도
+    correct_top1_general = 0
+    correct_top5_general = 0
+    correct_top1_superclass = 0
+    correct_top5_superclass = 0
     
-    with torch.no_grad():  # 테스트 시에는 gradient 계산 비활성화
+    with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
             if use_cuda:
                 inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = Variable(inputs), Variable(targets)
 
-            # 각 모델에 대해 예측 수행
+            # Get outputs from all models
             outputs_list = [net(inputs) for net in nets]
 
-            # Hard voting으로 Top-1 예측 값 계산
+            # Hard voting for Top-1 predictions
+            outputs_avg = sum(outputs_list) / len(outputs_list)  # Average logits for top-5 
+            top5_pred = torch.topk(outputs_avg, 5, dim=1)[1]  # General top-5 prediction
             voted_top1 = hard_voting_prediction([torch.argmax(out, dim=1) for out in outputs_list])
 
-            # Hard voting으로 Top-5 예측 값 계산
-            voted_top5 = hard_voting_top5([torch.topk(out, 5, dim=1)[1] for out in outputs_list])
-
             total += targets.size(0)
+            correct += voted_top1.eq(targets.data).cpu().sum()
 
-            # 정확도 계산
-            correct_top1 += voted_top1.eq(targets.data).cpu().sum()
-            correct_top5 += sum([targets[i].item() in voted_top5[i].cpu().numpy() for i in range(targets.size(0))])
+            correct_top1_general += voted_top1.eq(targets.data).cpu().sum()
+            correct_top5_general += sum([targets[i] in top5_pred[i] for i in range(targets.size(0))])
 
-            # Superclass 예측
+            # Superclass accuracy
             true_superclass = torch.tensor(map_to_superclass(targets.cpu().numpy(), class_to_superclass)).to(device)
             pred_superclasses_top1 = torch.tensor(map_to_superclass(voted_top1.cpu().numpy(), class_to_superclass)).to(device)
+
             correct_top1_superclass += (pred_superclasses_top1 == true_superclass).sum().item()
-            voted_top5_superclass = [torch.tensor(map_to_superclass(pred.cpu().numpy(), class_to_superclass)).to(device) for pred in voted_top5]
+
+            pred_superclasses_top5 = [torch.tensor(map_to_superclass(pred.cpu().numpy(), class_to_superclass)).to(device) for pred in top5_pred]
             for i in range(targets.size(0)):
                 true_label_superclass = true_superclass[i].item()
-                if true_label_superclass in voted_top5_superclass[i].cpu().numpy():
+                if true_label_superclass in pred_superclasses_top5[i].cpu().numpy():
                     correct_top5_superclass += 1
 
-    # 정확도 계산
-    acc_top1 = 100. * correct_top1 / total
-    acc_top5 = 100. * correct_top5 / total
-    acc_top1_superclass = 100. * correct_top1_superclass / total
-    acc_top5_superclass = 100. * correct_top5_superclass / total
+        # Test results output
+        acc_top1_general = 100. * correct_top1_general / total
+        acc_top5_general = 100. * correct_top5_general / total
+        acc_top1_superclass = 100. * correct_top1_superclass / total
+        acc_top5_superclass = 100. * correct_top5_superclass / total
 
-    # 결과 출력
-    print(f"-----------------Ensemble Model----------------------")
-    print(f"* Top-1 Accuracy = {acc_top1:.2f}%")
-    print(f"* Top-5 Accuracy = {acc_top5:.2f}%")
-    print(f"* Superclass Top-1 Accuracy = {acc_top1_superclass:.2f}%")
-    print(f"* Superclass Top-5 Accuracy = {acc_top5_superclass:.2f}%")
+        acc = 100.*correct/total
+        print(f"-----------------Ensemble Model----------------------")
+        print("| Validation Epoch #%d\t\t\tAcc@1: %.2f%%" %(epoch, acc))
+        print(f"* General Top-1 Accuracy = {acc_top1_general:.2f}%")
+        print(f"* General Top-5 Accuracy = {acc_top5_general:.2f}%")
+        print(f"* Superclass Top-1 Accuracy = {acc_top1_superclass:.2f}%")
+        print(f"* Superclass Top-5 Accuracy = {acc_top5_superclass:.2f}%")
+        
+        # Save model if best accuracy is achieved
+        if acc > best_acc:
+            print('| Saving Best model...\t\t\tTop1 = %.2f%%' %(acc))
+            state = {
+                    'net': net.module if use_cuda else net,
+                    'acc': acc,
+                    'epoch': epoch,
+            }
+            if not os.path.isdir('checkpoint'):
+                os.mkdir('checkpoint')
+            save_point = './checkpoint/'+args.dataset+os.sep
+            if not os.path.isdir(save_point):
+                os.mkdir(save_point)
+            
+            # Save each model with its respective filename
+            for i, net in enumerate(nets):
+                file_name = file_names[i]  # Ensure that file_name is properly set for each model
+                torch.save(state, save_point+file_name+'.t7')
+            
+            best_acc = acc
 
-    # 최상의 정확도 모델 저장 및 최고 성능 기록
-    if acc_top1 > best_acc:
-        print('| Saving Best model...\t\t\tTop-1 Accuracy = %.2f%%' % acc_top1)
-        state = {
-            'net': net.module if use_cuda else net,
-            'acc': acc_top1,
-            'epoch': epoch,
-        }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        save_point = './checkpoint/' + args.dataset + os.sep
-        if not os.path.isdir(save_point):
-            os.mkdir(save_point)
+    return acc_top1_general, acc_top5_general, acc_top1_superclass, acc_top5_superclass
 
-       
-        for i, net in enumerate(nets):
-            file_name = file_names[i]
-            torch.save(state, save_point + file_name + '.t7')
-
-        # 최고 성능 업데이트
-        best_acc = acc_top1
-        best_acc_top1 = acc_top1
-        best_acc_top5 = acc_top5
-        best_superclass_top1 = acc_top1_superclass
-        best_superclass_top5 = acc_top5_superclass
-
-    return acc_top1, acc_top5, acc_top1_superclass, acc_top5_superclass
+# Test only option
+if (args.testOnly):
+    top1_acc, top5_acc, top1_superclass_acc, top5_superclass_acc = test_ensemble(0)
 
 # Main training and testing loop
 if not args.testOnly:
     elapsed_time = 0
-    for epoch in range(start_epoch, num_epochs+1):
+    for epoch in range(start_epoch, num_epochs):
         start_time = time.time()
 
         train(epoch)
-        acc_top1, acc_top5, acc_top1_superclass, acc_top5_superclass = test_ensemble(epoch)
+        test_ensemble(epoch)
 
         epoch_time = time.time() - start_time
         elapsed_time += epoch_time
         print(f'| Elapsed time: {int(elapsed_time//3600)}:{int((elapsed_time % 3600)//60)}:{int(elapsed_time % 60)}')
 
-# Final testing with the best model after all epochs
-print('\n[Phase 4] : Best model testing with ensemble')
-
-# Best 성능 출력
-print(f'* Best model test results : Acc@1 = {best_acc_top1:.2f}%, Top-5 = {best_acc_top5:.2f}%, '
-      f'Superclass Top-1 = {best_superclass_top1:.2f}%, Superclass Top-5 = {best_superclass_top5:.2f}%')
+# Final testing with ensemble after all epochs
+print('\n[Phase 4] : Testing model ensemble')
+top1_acc, top5_acc, top1_superclass_acc, top5_superclass_acc = test_ensemble(cf.num_epochs)
+print('* Test results : Acc@1 = %.2f%%' %(best_acc))
 
 # Visualizing the training vs test loss
 plt.plot(train_losses, label='Training Loss')
