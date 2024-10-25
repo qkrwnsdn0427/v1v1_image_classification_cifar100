@@ -28,7 +28,7 @@ import os
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
-parser.add_argument('--seed', default=42, type=int, help='seed')
+parser.add_argument('--seed', default=14, type=int, help='seed')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
 parser.add_argument('--depth', default=28, type=int, help='depth of model')
 parser.add_argument('--widen_factor_1', default=14, type=int, help='width of model')
@@ -170,20 +170,10 @@ def get_ensemble_networks(args):
 
 # Model setup
 print('\n[Phase 2] : Model setup for Hard Voting Ensemble')
-if args.resume:
-    # Load checkpoint for each model
-    print('| Resuming from checkpoints...')
-    assert os.path.isdir('checkpoint'), 'Error: No checkpoint directory found!'
-    nets, file_names = get_ensemble_networks(args)
-    checkpoints = [torch.load('./checkpoint/'+args.dataset+os.sep+file_name+'.t7') for file_name in file_names]
-    nets = [checkpoint['net'] for checkpoint in checkpoints]
-    best_acc = max([checkpoint['acc'] for checkpoint in checkpoints])
-    start_epoch = min([checkpoint['epoch'] for checkpoint in checkpoints])
-else:
-    print('| Building net types for ensemble...')
-    nets, file_names = get_ensemble_networks(args)
-    for net in nets:
-        net.apply(conv_init)
+print('| Building net types for ensemble...')
+nets, file_names = get_ensemble_networks(args)
+for net in nets:
+    net.apply(conv_init)
 
 if use_cuda:
     for i, net in enumerate(nets):
@@ -202,6 +192,7 @@ def hard_voting_prediction(outputs_list):
 
 # Training function
 def train(epoch):
+    
     optimizers = [optim.SGD(net.parameters(), lr=cf.learning_rate(args.lr, epoch), momentum=0.9, weight_decay=5e-4) for net in nets]
     
     for net in nets:
@@ -220,12 +211,12 @@ def train(epoch):
         inputs, targets = Variable(inputs), Variable(targets)
         inputs, targets_a, targets_b, lam = cutmix_data(inputs, targets, beta=1.0)
         
-
+        
         for i, net in enumerate(nets):
-            optimizers[i].zero_grad()  
-            outputs = net(inputs)  
+            optimizers[i].zero_grad()
+            outputs = net(inputs) 
             loss = lam * criterion(outputs, targets_a) + (1 - lam) * criterion(outputs, targets_b)
-            loss.backward()  
+            loss.backward() 
             optimizers[i].step()  
 
         train_loss += loss.item()
@@ -305,17 +296,38 @@ def test_ensemble(epoch):
         print(f"* General Top-5 Accuracy = {acc_top5_general:.2f}%")
         print(f"* Superclass Top-1 Accuracy = {acc_top1_superclass:.2f}%")
         print(f"* Superclass Top-5 Accuracy = {acc_top5_superclass:.2f}%")
+
+        checkpoint_dir = './checkpoint/' + args.dataset + os.sep
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
         
         # Save model if best accuracy is achieved for each metric
         if acc > best_acc:
             best_acc = acc
-            print('| Updating Best Top-1 model...\t\t\tAcc@1 = %.2f%%' %(acc))
+            print('| Updating Best Top-1 model...\t\t\tAcc@1 = %.2f%%' % (acc))
+            torch.save({
+                'net': nets,
+                'acc': best_acc,
+                'epoch': epoch,
+            }, checkpoint_dir + 'best_top1_model.pth')
+        
         if acc_top5_general > best_top5_acc:
             best_top5_acc = acc_top5_general
-            print('| Updating Best Top-5 model...\t\t\tAcc@5 = %.2f%%' %(acc_top5_general))
+            print('| Updating Best Top-5 model...\t\t\tAcc@5 = %.2f%%' % (acc_top5_general))
+            torch.save({
+                'net': nets,
+                'acc': best_top5_acc,
+                'epoch': epoch,
+            }, checkpoint_dir + 'best_top5_model.pth')
+        
         if acc_top1_superclass > best_superclass_top1_acc:
             best_superclass_top1_acc = acc_top1_superclass
-            print('| Updating Best Superclass Top-1 model...\t\t\tAcc@1 Superclass = %.2f%%' %(acc_top1_superclass))
+            print('| Updating Best Superclass Top-1 model...\t\t\tAcc@1 Superclass = %.2f%%' % (acc_top1_superclass))
+            torch.save({
+                'net': nets,
+                'acc': best_superclass_top1_acc,
+                'epoch': epoch,
+            }, checkpoint_dir + 'best_superclass_top1_model.pth')
         
     return acc_top1_general, acc_top5_general, acc_top1_superclass, acc_top5_superclass
 
