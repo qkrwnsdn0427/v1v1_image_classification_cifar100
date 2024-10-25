@@ -31,7 +31,9 @@ parser.add_argument('--lr', default=0.1, type=float, help='learning_rate')
 parser.add_argument('--seed', default=42, type=int, help='seed')
 parser.add_argument('--net_type', default='wide-resnet', type=str, help='model')
 parser.add_argument('--depth', default=28, type=int, help='depth of model')
-parser.add_argument('--widen_factor', default=14, type=int, help='width of model')
+parser.add_argument('--widen_factor_1', default=14, type=int, help='width of model')
+parser.add_argument('--widen_factor_2', default=16, type=int, help='width of model')
+parser.add_argument('--widen_factor_3', default=18, type=int, help='width of model')
 parser.add_argument('--dropout', default=0.2, type=float, help='dropout_rate')
 parser.add_argument('--dataset', default='cifar100', type=str, help='dataset = cifar100')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -157,13 +159,14 @@ def rand_bbox(size, lam):
 
 # Return Wide-ResNet network and filename
 def get_ensemble_networks(args):
-    net1 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
-    net2 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
-    net3 = Wide_ResNet(args.depth, args.widen_factor, args.dropout, num_classes)
-    file_name1 = 'wide-resnet1-'+str(args.depth)+'x'+str(args.widen_factor)
-    file_name2 = 'wide-resnet2-'+str(args.depth)+'x'+str(args.widen_factor)
-    file_name3 = 'wide-resnet3-'+str(args.depth)+'x'+str(args.widen_factor)
+    net1 = Wide_ResNet(args.depth, args.widen_factor_1, args.dropout, num_classes)
+    net2 = Wide_ResNet(args.depth, args.widen_factor_2, args.dropout, num_classes)
+    net3 = Wide_ResNet(args.depth, args.widen_factor_3, args.dropout, num_classes)
+    file_name1 = 'wide-resnet1-'+str(args.depth)+'x'+str(args.widen_factor_1)
+    file_name2 = 'wide-resnet2-'+str(args.depth)+'x'+str(args.widen_factor_2)
+    file_name3 = 'wide-resnet3-'+str(args.depth)+'x'+str(args.widen_factor_3)
     return [net1, net2, net3], [file_name1, file_name2, file_name3]
+
 
 # Model setup
 print('\n[Phase 2] : Model setup for Hard Voting Ensemble')
@@ -199,7 +202,6 @@ def hard_voting_prediction(outputs_list):
 
 # Training function
 def train(epoch):
-    # 네트워크마다 각각 옵티마이저 생성
     optimizers = [optim.SGD(net.parameters(), lr=cf.learning_rate(args.lr, epoch), momentum=0.9, weight_decay=5e-4) for net in nets]
     
     for net in nets:
@@ -218,13 +220,13 @@ def train(epoch):
         inputs, targets = Variable(inputs), Variable(targets)
         inputs, targets_a, targets_b, lam = cutmix_data(inputs, targets, beta=1.0)
         
-        # 각 네트워크마다 학습 수행
+
         for i, net in enumerate(nets):
-            optimizers[i].zero_grad()  # 각 네트워크의 옵티마이저 초기화
-            outputs = net(inputs)  # 네트워크의 출력 계산
+            optimizers[i].zero_grad()  
+            outputs = net(inputs)  
             loss = lam * criterion(outputs, targets_a) + (1 - lam) * criterion(outputs, targets_b)
-            loss.backward()  # 역전파
-            optimizers[i].step()  # 옵티마이저 업데이트
+            loss.backward()  
+            optimizers[i].step()  
 
         train_loss += loss.item()
         _, predicted = torch.max(outputs.data, 1)
@@ -240,10 +242,13 @@ def train(epoch):
     train_loss = train_loss / len(trainloader)
     train_losses.append(train_loss)
 
-# Test function with hard voting ensemble
+best_acc = 0
+best_top5_acc = 0
+best_superclass_top1_acc = 0
+
 # Test function with hard voting ensemble
 def test_ensemble(epoch):
-    global best_acc
+    global best_acc, best_top5_acc, best_superclass_top1_acc
     for net in nets:
         net.eval()
     test_loss = 0
@@ -301,32 +306,18 @@ def test_ensemble(epoch):
         print(f"* Superclass Top-1 Accuracy = {acc_top1_superclass:.2f}%")
         print(f"* Superclass Top-5 Accuracy = {acc_top5_superclass:.2f}%")
         
-        # Save model if best accuracy is achieved
+        # Save model if best accuracy is achieved for each metric
         if acc > best_acc:
-            print('| Saving Best model...\t\t\tTop1 = %.2f%%' %(acc))
-            state = {
-                    'net': net.module if use_cuda else net,
-                    'acc': acc,
-                    'epoch': epoch,
-            }
-            if not os.path.isdir('checkpoint'):
-                os.mkdir('checkpoint')
-            save_point = './checkpoint/'+args.dataset+os.sep
-            if not os.path.isdir(save_point):
-                os.mkdir(save_point)
-            
-            # Save each model with its respective filename
-            for i, net in enumerate(nets):
-                file_name = file_names[i]  # Ensure that file_name is properly set for each model
-                torch.save(state, save_point+file_name+'.t7')
-            
             best_acc = acc
-
+            print('| Updating Best Top-1 model...\t\t\tAcc@1 = %.2f%%' %(acc))
+        if acc_top5_general > best_top5_acc:
+            best_top5_acc = acc_top5_general
+            print('| Updating Best Top-5 model...\t\t\tAcc@5 = %.2f%%' %(acc_top5_general))
+        if acc_top1_superclass > best_superclass_top1_acc:
+            best_superclass_top1_acc = acc_top1_superclass
+            print('| Updating Best Superclass Top-1 model...\t\t\tAcc@1 Superclass = %.2f%%' %(acc_top1_superclass))
+        
     return acc_top1_general, acc_top5_general, acc_top1_superclass, acc_top5_superclass
-
-# Test only option
-if (args.testOnly):
-    top1_acc, top5_acc, top1_superclass_acc, top5_superclass_acc = test_ensemble(0)
 
 # Main training and testing loop
 if not args.testOnly:
@@ -344,7 +335,7 @@ if not args.testOnly:
 # Final testing with ensemble after all epochs
 print('\n[Phase 4] : Testing model ensemble')
 top1_acc, top5_acc, top1_superclass_acc, top5_superclass_acc = test_ensemble(cf.num_epochs)
-print('* Test results : Acc@1 = %.2f%%' %(best_acc))
+print(f'* Final Test results : Best Acc@1 = {best_acc:.2f}%, Best Acc@5 = {best_top5_acc:.2f}%, Best Superclass Acc@1 = {best_superclass_top1_acc:.2f}%')
 
 # Visualizing the training vs test loss
 plt.plot(train_losses, label='Training Loss')
