@@ -27,8 +27,8 @@ python /v1v1_image_classification_cifar100/main.py --seed 42
 CUDA Version: 11.8
 GPU: NVIDIA RTX 3090
 
-## Cifar-100 Results
+## Cifar-100 Results  (Seed 27)
 
 | Network         | Dropout | Preprocess          |   Per Epoch  | Top1 acc(%) | Top5 acc(%) | superclass acc(%) |
 |-----------------|---------|---------------------|--------------|-------------|-------------|-------------|
-| WideResNet 28*14| 0.2     | meanstd             | 11 min 34 sec |    84.74    |    97.21    |    91.44    |
+| WideResNet 28*14| 0.2     | meanstd             | 11 min 34 sec |    85.08    |    97.10    |    91.41    |
